@@ -1,0 +1,17 @@
+.todo-form{
+    font-size: 18px;
+    padding-top: 15px ;
+}
+
+.todo-form input{
+    padding:5px;
+}
+
+.todo-form label{
+    display:block;
+    padding-bottom: 10px;
+}
+
+.todo-form .form-group{
+    padding-bottom: 15px;
+}
