@@ -1,0 +1,17 @@
+.video-form{
+    font-size:18px;
+    padding-top: 15px;
+}
+
+.video-form input{
+    padding:5px;
+}
+
+.video-form label{
+    display: block;
+    padding-bottom: 10px;
+}
+
+.video-form .form-group{
+    padding-bottom:1;
+}
