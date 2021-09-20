@@ -11,8 +11,13 @@
  if(!defined('ABSPATH')){
     exit;
 }
-
+  //Global options variable
+  $weather_options = get_option('weather_settings');
  //Load scripts
+ if(is_admin()){
+    require_once(plugin_dir_path(__FILE__).'/includes/weather-settings.php');
+ }
+
  require_once(plugin_dir_path(__FILE__).'/includes/weather-scripts.php');
  require_once(plugin_dir_path(__FILE__).'/includes/weather-widget.php');
 

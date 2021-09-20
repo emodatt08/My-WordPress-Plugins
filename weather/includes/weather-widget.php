@@ -22,7 +22,14 @@ class Weather_Widget extends WP_Widget {
 	 * @param array $instance
 	 */
 	public function widget( $args, $instance ) {
-
+		$instance = [
+			'country' => (!empty($instance['country'])) ? strip_tags($instance['country']) : '',
+			'region' => (!empty($instance['region'])) ? strip_tags($instance['region']) : '',
+			'latitude' => (!empty($instance['latitude'])) ? strip_tags($instance['latitude']) : '',
+			'longitude' => (!empty($instance['longitude'])) ? strip_tags($instance['longitude']) : '',
+			'temp_type' => (!empty($instance['temp_type'])) ? strip_tags($instance['temp_type']) : '',
+			'show_alerts' => (!empty($instance['show_alerts'])) ? strip_tags($instance['show_alerts']) : '',
+		];
 			//get and set values 	
 			// echo $args['before_widget'];
 			
@@ -47,9 +54,8 @@ class Weather_Widget extends WP_Widget {
 			// 	$count = 2;
 			// }
 		
-		
 			// //show repos
-			// $repos = $this->getRepoItems($title, $username, $count);
+			$weather = $this->getWeather($instance);
 			
 
         ?>
@@ -88,9 +94,10 @@ class Weather_Widget extends WP_Widget {
 		$instance = [
 				'country' => (!empty($new_instance['country'])) ? strip_tags($new_instance['country']) : '',
 				'region' => (!empty($new_instance['region'])) ? strip_tags($new_instance['region']) : '',
-                'use_geolocation' => (!empty($new_instance['use_geolocation'])) ? strip_tags($new_instance['use_geolocation']) : '',
-                'show_humidity' => (!empty($new_instance['show_humidity'])) ? strip_tags($new_instance['show_humidity']) : '',
-                'temp_type' => (!empty($new_instance['temp_type'])) ? strip_tags($new_instance['temp_type']) : ''
+                'latitude' => (!empty($new_instance['latitude'])) ? strip_tags($new_instance['latitude']) : '',
+                'longitude' => (!empty($new_instance['longitude'])) ? strip_tags($new_instance['longitude']) : '',
+				'temp_type' => (!empty($new_instance['temp_type'])) ? strip_tags($new_instance['temp_type']) : '',
+				'show_alerts' => (!empty($new_instance['show_alerts'])) ? strip_tags($new_instance['show_alerts']) : '',
 		];
 
 		return $instance;
@@ -105,14 +112,19 @@ class Weather_Widget extends WP_Widget {
     private function getForm($instance){
         $country = $instance['country'];
         $region = $instance['region'];
-        $use_geolocation = $instance['use_geolocation'];
-        $show_humidity = $instance['show_humidity'];
+        $latitude = $instance['latitude'];
+        $longitude = $instance['longitude'];
         $temp_type = $instance['temp_type'];
        
         ?>
-            <p>
-            <label for="<?php echo $this->get_field_id('use_geolocation'); ?>"><?php _e('Use Geolocation?: '); ?></label><br>
-                <input type="checkbox" <?php checked($instance['use_geolocation'], 'on'); ?> id="<?php echo $this->get_field_id('use_geolocation'); ?>" name="<?php echo $this->get_field_name('use_geolocation'); ?>"  class="checkbox">
+          	<p>
+            <label for="<?php echo $this->get_field_id('latitude'); ?>"><?php _e('Latitude: '); ?></label><br>
+                <input type="text" id="<?php echo $this->get_field_id('latitude'); ?>" name="<?php echo $this->get_field_name('latitude'); ?>" value="<?php echo esc_attr($latitude); ?>" class="widefat">
+            </p>
+
+			<p>
+            <label for="<?php echo $this->get_field_id('longitude'); ?>"><?php _e('Longitude: '); ?></label><br>
+                <input type="text" id="<?php echo $this->get_field_id('longitude'); ?>" name="<?php echo $this->get_field_name('longitude'); ?>" value="<?php echo esc_attr($longitude); ?>" class="widefat">
             </p>
 
             <p>
@@ -134,8 +146,8 @@ class Weather_Widget extends WP_Widget {
             </p>
 
             <p>
-            <label for="<?php echo $this->get_field_id('show_humidity'); ?>"><?php _e('Show humidity?: '); ?></label><br>
-                <input type="checkbox" <?php checked($instance['show_humidity'], 'on'); ?> id="<?php echo $this->get_field_id('show_humidity'); ?>" name="<?php echo $this->get_field_name('show_humidity'); ?>"  class="checkbox">
+            <label for="<?php echo $this->get_field_id('show_alerts'); ?>"><?php _e('Show Alerts?: '); ?></label><br>
+                <input type="checkbox" <?php checked($instance['show_alerts'], 'on'); ?> id="<?php echo $this->get_field_id('show_alerts'); ?>" name="<?php echo $this->get_field_name('show_alerts'); ?>"  class="checkbox">
             </p>
 
 
@@ -149,8 +161,8 @@ class Weather_Widget extends WP_Widget {
 	 * @param [type] $url
 	 * @return void
 	 */
-	public function fetch($title, $username, $count){
-		$url = $this->url.$username."/repos?sort=created&per_page=".$count;
+	public function fetch($data_array){
+		$url = $this->url."?key".$weather_options['weather_api_key'];
         $agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36";
  
              $curl = curl_init();
@@ -176,8 +188,9 @@ class Weather_Widget extends WP_Widget {
 		  * @param [type] $count
 		  * @return void
 		  */
-		 private function getRepoItems($title, $username, $count){
-			$repos = $this->fetch($title, $username, $count);
+		 private function getWeather($data_array){
+			 
+			$repos = $this->fetch($data_array);
 			if(isset($repos)){
 				$repos = json_decode($repos);
 				$output = '<ul class="repos"> ';
