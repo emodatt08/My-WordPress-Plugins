@@ -22,42 +22,21 @@ class Weather_Widget extends WP_Widget {
 	 * @param array $instance
 	 */
 	public function widget( $args, $instance ) {
+		//get and set values 	
 		$instance = [
 			'country' => (!empty($instance['country'])) ? strip_tags($instance['country']) : '',
 			'region' => (!empty($instance['region'])) ? strip_tags($instance['region']) : '',
-			'latitude' => (!empty($instance['latitude'])) ? strip_tags($instance['latitude']) : '',
-			'longitude' => (!empty($instance['longitude'])) ? strip_tags($instance['longitude']) : '',
-			'temp_type' => (!empty($instance['temp_type'])) ? strip_tags($instance['temp_type']) : '',
-			'show_alerts' => (!empty($instance['show_alerts'])) ? strip_tags($instance['show_alerts']) : '',
+			'coordinates' => (!empty($instance['latitude'])) ? strip_tags($instance['latitude'].",".$instance['longitude']) : '',
+			'temp' => (!empty($instance['temp_type']) && $instance['temp_type'] == "celsius") ? "temp_c" : 'temp_f',
+			'alerts' => $instance['show_alerts'] ? true : false,
 		];
-			//get and set values 	
-			// echo $args['before_widget'];
+
 			
+		echo $args['before_widget'];
 
-			// if(isset($instance['title'])){
-			// 	$title = apply_filters('widget_title', $instance['title']);
-			// 	echo $args['before_title'].$title.$args['after_title'];
-			// }else{
-			// 	$title = "Chat";
-			// }	
+		$weather = $this->getWeather($instance);
+		echo $weather;
 			
-
-			// if(isset($instance['username'])){
-			// 	$username = esc_attr($instance['username']);
-			// }else{
-			// 	$username = "emodatt08";
-			// }
-
-			// if(isset($instance['count'])){
-			// 	$count = esc_attr($instance['count']);
-			// }else{
-			// 	$count = 2;
-			// }
-		
-			// //show repos
-			$weather = $this->getWeather($instance);
-			
-
         ?>
 
 			
@@ -98,6 +77,7 @@ class Weather_Widget extends WP_Widget {
                 'longitude' => (!empty($new_instance['longitude'])) ? strip_tags($new_instance['longitude']) : '',
 				'temp_type' => (!empty($new_instance['temp_type'])) ? strip_tags($new_instance['temp_type']) : '',
 				'show_alerts' => (!empty($new_instance['show_alerts'])) ? strip_tags($new_instance['show_alerts']) : '',
+				'use_geolocation'=>(!empty($new_instance['use_geolocation'])) ? strip_tags($new_instance['use_geolocation']) : ''
 		];
 
 		return $instance;
@@ -114,7 +94,8 @@ class Weather_Widget extends WP_Widget {
         $region = $instance['region'];
         $latitude = $instance['latitude'];
         $longitude = $instance['longitude'];
-        $temp_type = $instance['temp_type'];
+		$temp_type = $instance['temp_type'];
+		$use_geolocation = $instance['use_geolocation'];
        
         ?>
           	<p>
@@ -139,15 +120,20 @@ class Weather_Widget extends WP_Widget {
 
             <p>
             <label for="<?php echo $this->get_field_id('temp_type'); ?>"><?php _e('Temperature Type: '); ?></label><br>
-                <select class="widefat" name="<?php echo $this->get_field_id('temp_type'); ?>" id="<?php echo $this->get_field_id('temp_type'); ?>">
-                    <option value="<?php echo esc_attr("fahrenheit"); ?>" <?php echo ($temp_type =="fahrenheit") ? "selected":""; ?>> <?php echo __('Fahrenheit'); ?></option>
-                    <option value="<?php echo esc_attr("celsius"); ?> <?php echo ($temp_type =="celsius") ? "selected":""; ?>"><?php echo __('Celsius'); ?></option>
+                <select class="widefat" name="<?php echo $this->get_field_name('temp_type'); ?>" id="<?php echo $this->get_field_id('temp_type'); ?>">
+                    <option value="<?php echo esc_attr("fahrenheit"); ?>" <?php echo ($temp_type =="fahrenheit") ? "selected":""; ?> >   <?php echo __('Fahrenheit'); ?></option>
+                    <option value="<?php echo esc_attr("celsius"); ?>" <?php echo ($temp_type =="celsius") ? "selected":""; ?> >   <?php echo __('Celsius'); ?></option>
                 </select>
             </p>
 
             <p>
             <label for="<?php echo $this->get_field_id('show_alerts'); ?>"><?php _e('Show Alerts?: '); ?></label><br>
                 <input type="checkbox" <?php checked($instance['show_alerts'], 'on'); ?> id="<?php echo $this->get_field_id('show_alerts'); ?>" name="<?php echo $this->get_field_name('show_alerts'); ?>"  class="checkbox">
+			</p>
+			
+			<p>
+            <label for="<?php echo $this->get_field_id('use_geolocation'); ?>"><?php _e('Use Geolocation?: '); ?></label><br>
+                <input type="checkbox" <?php checked($instance['use_geolocation'], 'on'); ?> id="<?php echo $this->get_field_id('use_geolocation'); ?>" name="<?php echo $this->get_field_name('use_geolocation'); ?>"  class="checkbox">
             </p>
 
 
@@ -162,7 +148,8 @@ class Weather_Widget extends WP_Widget {
 	 * @return void
 	 */
 	public function fetch($data_array){
-		$url = $this->url."?key".$weather_options['weather_api_key'];
+
+		$url = $this->setUrl($data_array);
         $agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36";
  
              $curl = curl_init();
@@ -175,10 +162,9 @@ class Weather_Widget extends WP_Widget {
              curl_setopt($curl, CURLOPT_USERAGENT, $agent);
              curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
              $response = curl_exec($curl);
-             curl_close($response);
-            //var_dump($str, $url); die;
+             curl_close($curl);
              return $response;
- 
+
          }
 		 /**
 		  * Get Github Repos via curls
@@ -189,25 +175,45 @@ class Weather_Widget extends WP_Widget {
 		  * @return void
 		  */
 		 private function getWeather($data_array){
-			 
-			$repos = $this->fetch($data_array);
-			if(isset($repos)){
-				$repos = json_decode($repos);
-				$output = '<ul class="repos"> ';
+				$geoplugin = new geoPlugin();
+				print_r($geoplugin->locate()); die;
+				$weatherReportResponse = $this->fetch($data_array);
+				$output = "";
+				if(isset($weatherReportResponse)){
+					$weather = json_decode($weatherReportResponse);
+					// echo "<pre>";
+					// print_r($data_array); die;
+					?>
+						<ul class="repos"> 
+							<li>
+							
+							<div class="weather"><strong><?php echo __("State: ", "weather_domain" )?> </strong><?php echo $weather->location->name; ?> </div>
+							<div class="weather"><strong><?php echo __("Condition: ", "weather_domain" )?> </strong><?php echo $weather->current->condition->text; ?> <img class="weather-icon" src="<?php echo $weather->current->condition->icon; ?>"></div>		
+							<div class="weather"><strong><?php echo __("Region: ", "weather_domain" )?> </strong><?php echo $weather->location->region; ?></div>
+							<div class="weather"><strong><?php echo __("Timezone: ", "weather_domain" )?> </strong><?php echo  $weather->location->tz_id; ?></div>
+							<div class="weather"><strong><?php echo __("Time: ", "weather_domain" )?> </strong><?php echo $weather->location->localtime; ?></div>
+							<div class="weather"><?php echo ($data_array['temp'] == "temp_c") ?  __("Celsius: ", "weather_domain" ). $weather->current->temp_c."°C" : __("Fahrenheit: ", "weather_domain" ).$weather->current->temp_f."°F"; ?></div>
+							<div class="weather"><?php echo ($weather->current->is_day) ? __("Period: Day", "weather_domain" ) : __("Period: Night", "weather_domain" ) ; ?></div>
+							
+							</li>
+						</ul>
 
-				foreach($repos as $repo){
-					$output .= '<li>
-					<div class="repo-title">"'.$repo->name.'" </div>
-					<div class="repo-desc">"'.$repo->description.'" </div>
-					<a href="'.$repo->html_url.'" target="_blank"> See More </a>
-					</li>';
+					<?php
+					
+								
 				}
 
-				$output .= '</ul>';
-			}
-
-
 			
+				return $output;
+		 }
+		 /**
+		  * Set URL Query
+		  */
+		 private function setUrl($data){
+			 $weather_options = get_option("weather_settings");
+			 return $this->url."?key=".$weather_options['weather_api_key'].
+			 "&q=".$data['country']."&q=".$data['region']."&q=".$data['coordinates']."&q=".$data['temp'].
+			 "&alerts=".$data['alerts'];
 		 }
 
   

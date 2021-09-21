@@ -17,7 +17,7 @@
  if(is_admin()){
     require_once(plugin_dir_path(__FILE__).'/includes/weather-settings.php');
  }
-
+ require_once(plugin_dir_path(__FILE__).'/includes/geoplugin.class.php');
  require_once(plugin_dir_path(__FILE__).'/includes/weather-scripts.php');
  require_once(plugin_dir_path(__FILE__).'/includes/weather-widget.php');
 
