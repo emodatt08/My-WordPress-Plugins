@@ -29,6 +29,8 @@ class Weather_Widget extends WP_Widget {
 			'coordinates' => (!empty($instance['latitude'])) ? strip_tags($instance['latitude'].",".$instance['longitude']) : '',
 			'temp' => (!empty($instance['temp_type']) && $instance['temp_type'] == "celsius") ? "temp_c" : 'temp_f',
 			'alerts' => $instance['show_alerts'] ? true : false,
+			'env' => (!empty($instance['env'])) ? strip_tags($instance['env']) : '',
+			'use_geolocation' => (!empty($instance['use_geolocation'])) ? strip_tags($instance['use_geolocation']) : '',
 		];
 
 			
@@ -77,7 +79,8 @@ class Weather_Widget extends WP_Widget {
                 'longitude' => (!empty($new_instance['longitude'])) ? strip_tags($new_instance['longitude']) : '',
 				'temp_type' => (!empty($new_instance['temp_type'])) ? strip_tags($new_instance['temp_type']) : '',
 				'show_alerts' => (!empty($new_instance['show_alerts'])) ? strip_tags($new_instance['show_alerts']) : '',
-				'use_geolocation'=>(!empty($new_instance['use_geolocation'])) ? strip_tags($new_instance['use_geolocation']) : ''
+				'use_geolocation'=>(!empty($new_instance['use_geolocation'])) ? strip_tags($new_instance['use_geolocation']) : '',
+				'env'=>(!empty($new_instance['env'])) ? strip_tags($new_instance['env']) : ''
 		];
 
 		return $instance;
@@ -96,6 +99,7 @@ class Weather_Widget extends WP_Widget {
         $longitude = $instance['longitude'];
 		$temp_type = $instance['temp_type'];
 		$use_geolocation = $instance['use_geolocation'];
+		$env = $instance['env'];
        
         ?>
           	<p>
@@ -126,6 +130,14 @@ class Weather_Widget extends WP_Widget {
                 </select>
             </p>
 
+			<p>
+			<label for="<?php echo $this->get_field_id('env'); ?>"><?php _e('Environment(Development or Live): '); ?></label><br>
+                <select class="widefat" name="<?php echo $this->get_field_name('env'); ?>" id="<?php echo $this->get_field_id('env'); ?>">
+                    <option value="<?php echo esc_attr("live"); ?>" <?php echo ($env =="live") ? "selected":""; ?> >   <?php echo __('Live'); ?></option>
+                    <option value="<?php echo esc_attr("test"); ?>" <?php echo ($env =="test") ? "selected":""; ?> >   <?php echo __('Test'); ?></option>
+                </select>
+            </p>
+
             <p>
             <label for="<?php echo $this->get_field_id('show_alerts'); ?>"><?php _e('Show Alerts?: '); ?></label><br>
                 <input type="checkbox" <?php checked($instance['show_alerts'], 'on'); ?> id="<?php echo $this->get_field_id('show_alerts'); ?>" name="<?php echo $this->get_field_name('show_alerts'); ?>"  class="checkbox">
@@ -136,6 +148,7 @@ class Weather_Widget extends WP_Widget {
                 <input type="checkbox" <?php checked($instance['use_geolocation'], 'on'); ?> id="<?php echo $this->get_field_id('use_geolocation'); ?>" name="<?php echo $this->get_field_name('use_geolocation'); ?>"  class="checkbox">
             </p>
 
+			
 
         <?php
     }
@@ -149,21 +162,28 @@ class Weather_Widget extends WP_Widget {
 	 */
 	public function fetch($data_array){
 
-		$url = $this->setUrl($data_array);
-        $agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36";
- 
-             $curl = curl_init();
-             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, FALSE);
-             curl_setopt($curl, CURLOPT_HEADER, false);
-             curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-             curl_setopt($curl, CURLOPT_URL, $url);
-             curl_setopt($curl, CURLOPT_REFERER, $url);
-             //curl_setopt($curl,CURLOPT_HTTPHEADER,$header);
-             curl_setopt($curl, CURLOPT_USERAGENT, $agent);
-             curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
-             $response = curl_exec($curl);
-             curl_close($curl);
-             return $response;
+				$url = $this->setUrl($data_array);
+		
+      
+				$curl = curl_init();
+
+				curl_setopt_array($curl, array(
+				CURLOPT_URL => $url,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_ENCODING => '',
+				CURLOPT_MAXREDIRS => 10,
+				CURLOPT_TIMEOUT => 0,
+				CURLOPT_FOLLOWLOCATION => true,
+				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+				CURLOPT_CUSTOMREQUEST => 'GET',
+				));
+
+				$response = curl_exec($curl);
+
+				curl_close($curl);
+				// echo "<pre>";
+				// var_dump($url, $response); die;
+				return $response;
 
          }
 		 /**
@@ -175,8 +195,16 @@ class Weather_Widget extends WP_Widget {
 		  * @return void
 		  */
 		 private function getWeather($data_array){
-				$geoplugin = new geoPlugin();
-				print_r($geoplugin->locate()); die;
+				if($data_array['use_geolocation'] == "on"){
+					$geoplugin = new geoPlugin();
+					$geoplugin->locate( ($data_array['env'] == "test") ? "41.210.13.250":"" );
+					$data_array['country'] = str_replace(" ", "%20",$geoplugin->countryName);
+					$data_array['region'] = str_replace(" ", "%20",$geoplugin->regionName);
+					$data_array['coordinates'] = $geoplugin->latitude.",".$geoplugin->longitude;
+
+				}
+				// echo "<pre>";
+				// print_r($data_array); die;
 				$weatherReportResponse = $this->fetch($data_array);
 				$output = "";
 				if(isset($weatherReportResponse)){
